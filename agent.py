@@ -7,7 +7,7 @@ a Gestionagile tramite POST /api/agent/report.
 Variabili d'ambiente:
   AGENT_TOKEN      token univoco del server (generato da Gestionagile)
   AGENT_URL        URL dell'endpoint, es. https://gestione.example.com/api/agent/report
-  AGENT_INTERVAL   secondi tra una rilevazione e l'altra (default 60)
+  AGENT_INTERVAL   secondi tra una rilevazione e l'altra (default 4)
   AGENT_DISK_PATH  percorso da monitorare per lo spazio disco (default /)
   AGENT_STATE_FILE file dove salvare lo stato dei contatori di rete
                    (default ~/.local/state/monitor-agent/state.json)
@@ -24,7 +24,7 @@ import psutil
 import requests
 
 
-DEFAULT_INTERVAL = 60
+DEFAULT_INTERVAL = 4
 DEFAULT_DISK_PATH = "/"
 DEFAULT_STATE_FILE = str(
     Path.home() / ".local" / "state" / "monitor-agent" / "state.json"
@@ -61,7 +61,7 @@ def load_config() -> dict:
     return {
         "token": token,
         "url": url,
-        "interval": max(interval, 10),
+        "interval": max(interval, 4),
         "disk_path": disk_path,
         "state_file": state_file,
     }
