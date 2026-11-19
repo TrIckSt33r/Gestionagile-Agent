@@ -11,8 +11,11 @@ Variabili d'ambiente:
   AGENT_DISK_PATH  percorso da monitorare per lo spazio disco (default /)
   AGENT_STATE_FILE file dove salvare lo stato dei contatori di rete
                    (default ~/.local/state/monitor-agent/state.json)
+  AGENT_HMAC_SECRET  opzionale: chiave per HMAC stateless (se configurato lato server)
 """
 
+import hmac
+import hashlib
 import json
 import os
 import signal
@@ -57,6 +60,7 @@ def load_config() -> dict:
 
     disk_path = os.getenv("AGENT_DISK_PATH", DEFAULT_DISK_PATH)
     state_file = os.getenv("AGENT_STATE_FILE", DEFAULT_STATE_FILE)
+    hmac_secret = os.getenv("AGENT_HMAC_SECRET")
 
     return {
         "token": token,
@@ -64,6 +68,7 @@ def load_config() -> dict:
         "interval": max(interval, 4),
         "disk_path": disk_path,
         "state_file": state_file,
+        "hmac_secret": hmac_secret,
     }
 
 
@@ -135,14 +140,26 @@ def collect_metrics(disk_path: str, state: dict) -> dict | None:
     }
 
 
-def send_report(url: str, token: str, metrics: dict) -> bool:
+def send_report(url: str, token: str, metrics: dict, hmac_secret: str | None) -> bool:
     """Invia le metriche all'endpoint. Restituisce True se successo."""
+    # Serializza il payload in modo deterministico (chiavi ordinate, niente spazi)
+    payload = json.dumps(metrics, separators=(",", ":"), sort_keys=True)
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
+
+    # Aggiunge HMAC se secret configurato
+    if hmac_secret:
+        timestamp = str(int(time.time()))
+        message = f"{timestamp}.{payload}".encode()
+        signature = hmac.new(hmac_secret.encode(), message, hashlib.sha256).hexdigest()
+        headers["X-Timestamp"] = timestamp
+        headers["X-Signature"] = signature
+
     try:
-        response = requests.post(url, json=metrics, headers=headers, timeout=10)
+        response = requests.post(url, data=payload, headers=headers, timeout=10)
         if response.status_code == 200:
             return True
         print(
@@ -162,13 +179,14 @@ def main() -> None:
     print(
         f"Agente avviato: intervallo {config['interval']}s, "
         f"disco {config['disk_path']}, endpoint {config['url']}"
+        f"{', HMAC abilitato' if config['hmac_secret'] else ''}"
     )
 
     while running:
         metrics = collect_metrics(config["disk_path"], state)
 
         if metrics is not None:
-            if send_report(config["url"], config["token"], metrics):
+            if send_report(config["url"], config["token"], metrics, config["hmac_secret"]):
                 save_state(config["state_file"], state)
                 print(
                     f"[{time.strftime('%H:%M:%S')}] "
