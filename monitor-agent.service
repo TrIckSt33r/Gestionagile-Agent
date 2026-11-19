@@ -1,0 +1,36 @@
+[Unit]
+Description=Gestionagile Monitor Agent
+Documentation=https://github.com/BrizioFab/Gestionagile
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Utente dedicato (creare con: useradd -r -s /bin/false monitor-agent)
+User=monitor-agent
+Group=monitor-agent
+# Directory di lavoro (dove risiede agent.py e .venv)
+WorkingDirectory=/opt/monitor-agent
+# Variabili d'ambiente da file (token, url, hmac key, ecc.)
+EnvironmentFile=-/etc/monitor-agent/.env
+# Esecuzione: python del virtualenv + agent.py
+ExecStart=/opt/monitor-agent/.venv/bin/python agent.py
+# Riavvio automatico se crasha
+Restart=always
+RestartSec=5
+# Limiti risorse (opzionale, per sicurezza)
+MemoryMax=100M
+CPUQuota=10%
+# Hardening sicurezza
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/monitor-agent /var/lib/monitor-agent
+# Logging via journald (standard output/error)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=monitor-agent
+
+[Install]
+WantedBy=multi-user.target
