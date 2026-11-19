@@ -43,12 +43,14 @@ sudo cp .env.example /etc/monitor-agent/.env
 sudo chown root:monitor-agent /etc/monitor-agent/.env
 sudo chmod 640 /etc/monitor-agent/.env
 
-# EDIT con i valori dalla UI Gestionagile:
-# - AGENT_TOKEN = token mostrato in "Nuove credenziali agente"
-# - AGENT_HMAC_KEY = chiave HMAC mostrata insieme al token
+# EDIT con i valori dalla UI Gestionagile (pagina dettaglio server → "Nuovo token"):
+# - AGENT_TOKEN = token mostrato (Authorization: Bearer)
+# - AGENT_HMAC_KEY = chiave HMAC mostrata (X-Signature) — **obbligatoria se hai rigenerato il token**
 # - AGENT_URL = https://tuo-gestionagile.example.com/api/agent/report
 sudoedit /etc/monitor-agent/.env
 ```
+
+> **Nota HMAC:** Dal momento in cui clicchi "Nuovo token" nella UI, il server genera una coppia **token + chiave HMAC**. Da quel momento l'agente **deve** inviare `AGENT_HMAC_KEY` (header `X-Signature`). Senza, il server rifiuta con 401.
 
 ## 4. Installa servizio systemd
 ```bash
@@ -82,10 +84,12 @@ sudo systemctl restart monitor-agent
 |-----------|-------------|---------|-------------|
 | `AGENT_TOKEN` | Sì | — | Token Bearer (da UI) |
 | `AGENT_URL` | Sì | — | Endpoint POST /api/agent/report |
-| `AGENT_HMAC_KEY` | No | — | Chiave HMAC per-server (da UI) |
+| `AGENT_HMAC_KEY` | **Sì\*** | — | Chiave HMAC per-server (da UI, generata con "Nuovo token") |
 | `AGENT_INTERVAL` | No | `4` | Secondi tra invii (min 4) |
 | `AGENT_DISK_PATH` | No | `/` | Path per `disk_percent` |
 | `AGENT_STATE_FILE` | No | `~/.local/state/monitor-agent/state.json` | File persistenza contatori rete |
+
+\* Obbligatoria se il server ha HMAC key (generata cliccando "Nuovo token" in UI). Server senza HMAC key (vecchi token) la saltano per backward compat.
 
 ## Sicurezza
 - Il file `/etc/monitor-agent/.env` contiene segreti: **permessi 640**, owner `root:monitor-agent`
