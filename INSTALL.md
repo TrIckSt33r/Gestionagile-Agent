@@ -24,16 +24,13 @@ sudo chmod 750 /etc/monitor-agent
 # Come root o utente con sudo
 cd /opt/monitor-agent
 
-# Clona solo la cartella agent/ del repo (o copia i file manualmente)
-git clone --filter=blob:none --sparse https://github.com/BrizioFab/Gestionagile.git .
-git sparse-checkout set agent
-mv agent/* .
-rm -rf agent .git
+# Clona il repo dell'agente
+git clone https://github.com/TrIckSt33r/Gestionagile-Agent.git .
 
 # Virtualenv e dipendenze
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install psutil requests
+.venv/bin/pip install -r requirements.txt
 ```
 
 ## 3. Configurazione
@@ -74,8 +71,7 @@ journalctl -u monitor-agent -n 50
 ## 6. Aggiornamenti futuri
 ```bash
 cd /opt/monitor-agent
-git pull origin main   # se hai clona il repo completo
-# oppure ricopia i file aggiornati
+sudo git pull
 sudo systemctl restart monitor-agent
 ```
 
